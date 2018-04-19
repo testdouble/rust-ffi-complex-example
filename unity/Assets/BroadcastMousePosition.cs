@@ -11,8 +11,7 @@ public class BroadcastMousePosition : MonoBehaviour {
       Debug.Log(Input.mousePosition);
 
       Vector3 projectedPosition = Camera.main.ScreenToWorldPoint(Input.mousePosition);
-
-      gameObject.transform.position = new Vector3(projectedPosition.x, projectedPosition.y, 0);
+      FFI.sendPositionUpdate(projectedPosition);
     }
   }
 }

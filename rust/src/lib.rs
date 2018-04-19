@@ -1,7 +1,11 @@
+extern crate byteorder;
+
 #[macro_use]
 mod debug;
 
+use self::byteorder::{NetworkEndian, ReadBytesExt, WriteBytesExt};
 use std::ffi::CStr;
+use std::io::Cursor;
 use std::mem::{drop, transmute};
 use std::net::UdpSocket;
 use std::os::raw::c_char;
@@ -44,6 +48,37 @@ impl<'a> Baton {
             Ok(_) => Ok(()),
             Err(error) => Err(format!("{:}", error)),
         }
+    }
+
+    fn send_position_update(&mut self, data: &mut PositionUpdate) -> Result<(), String> {
+        debug!("Position update received: {:}, {:}", data.x, data.y);
+
+        let mut cursor = Cursor::new(Vec::new());
+        try_or_string!(cursor.write_u8(1));
+        try_or_string!(cursor.write_i32::<NetworkEndian>(data.x));
+        try_or_string!(cursor.write_i32::<NetworkEndian>(data.y));
+
+        match self.socket.send_to(&cursor.into_inner(), &self.server_url) {
+            Ok(_) => Ok(()),
+            Err(error) => Err(format!("{:}", error)),
+        }
+    }
+}
+
+#[derive(Clone, Debug, PartialEq)]
+#[repr(C)]
+pub struct PositionUpdate {
+    pub x: i32,
+    pub y: i32,
+}
+
+impl<'a> PositionUpdate {
+    fn to_ptr(self) -> *mut PositionUpdate {
+        unsafe { transmute(Box::new(self)) }
+    }
+
+    fn from_ptr(ptr: *mut PositionUpdate) -> &'a mut PositionUpdate {
+        unsafe { &mut *ptr }
     }
 }
 
@@ -97,6 +132,22 @@ pub extern "C" fn disconnect_from_server(ptr: *mut *mut Baton) {
 pub extern "C" fn send_ding(ptr: *mut Baton) -> bool {
     if !ptr.is_null() {
         match Baton::from_ptr(ptr).send_ding() {
+            Ok(_) => true,
+            Err(message) => {
+                debug!("Error while sending: {:}", message);
+
+                false
+            }
+        }
+    } else {
+        false
+    }
+}
+
+#[no_mangle]
+pub extern "C" fn send_position_update(ptr: *mut Baton, data: *mut PositionUpdate) -> bool {
+    if !ptr.is_null() && !data.is_null() {
+        match Baton::from_ptr(ptr).send_position_update(PositionUpdate::from_ptr(data)) {
             Ok(_) => true,
             Err(message) => {
                 debug!("Error while sending: {:}", message);

@@ -8,3 +8,4 @@ name = "ffi_example"
 crate-type = ["dylib"]
 
 [dependencies]
+byteorder = "1.1.0"
