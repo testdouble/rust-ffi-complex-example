@@ -6,9 +6,11 @@ using UnityEngine;
 public class FFI
 {
     private static IntPtr _baton;
+    private static UInt32 _id = (UInt32)(new System.Random()).Next();
 
     [StructLayout(LayoutKind.Sequential)]
     public class PositionUpdate {
+        public UInt32 id;
         public Int32 x;
         public Int32 y;
     }
@@ -39,10 +41,11 @@ public class FFI
     public static void sendPositionUpdate(Vector3 position)
     {
         PositionUpdate update = new PositionUpdate();
-        Debug.Log(String.Format("TEST 1: {0}, {1}", position.x, position.y));
+
+        update.id = _id;
         update.x = (Int32)Mathf.RoundToInt(position.x * 10000);
         update.y = (Int32)Mathf.RoundToInt(position.y * 10000);
-        Debug.Log(String.Format("TEST 2: {0}, {1}", update.x, update.y));
+
         send_position_update(_baton, update);
     }
 }

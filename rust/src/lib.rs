@@ -55,6 +55,7 @@ impl<'a> Baton {
 
         let mut cursor = Cursor::new(Vec::new());
         try_or_string!(cursor.write_u8(1));
+        try_or_string!(cursor.write_u32::<NetworkEndian>(data.id));
         try_or_string!(cursor.write_i32::<NetworkEndian>(data.x));
         try_or_string!(cursor.write_i32::<NetworkEndian>(data.y));
 
@@ -68,6 +69,7 @@ impl<'a> Baton {
 #[derive(Clone, Debug, PartialEq)]
 #[repr(C)]
 pub struct PositionUpdate {
+    pub id: u32,
     pub x: i32,
     pub y: i32,
 }
