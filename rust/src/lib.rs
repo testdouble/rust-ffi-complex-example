@@ -43,8 +43,12 @@ impl<'a> Baton {
         drop(baton);
     }
 
-    fn send_ding(&mut self) -> Result<(), String> {
-        match self.socket.send_to(&[0; 10], &self.server_url) {
+    fn send_status_update(&mut self, id: u32, status: StatusUpdate) -> Result<(), String> {
+        let mut cursor = Cursor::new(Vec::new());
+        try_or_string!(cursor.write_u8(status.to_byte()));
+        try_or_string!(cursor.write_u32::<NetworkEndian>(id));
+
+        match self.socket.send_to(&cursor.into_inner(), &self.server_url) {
             Ok(_) => Ok(()),
             Err(error) => Err(format!("{:}", error)),
         }
@@ -54,7 +58,7 @@ impl<'a> Baton {
         debug!("Position update received: {:}, {:}", data.x, data.y);
 
         let mut cursor = Cursor::new(Vec::new());
-        try_or_string!(cursor.write_u8(1));
+        try_or_string!(cursor.write_u8(3));
         try_or_string!(cursor.write_u32::<NetworkEndian>(data.id));
         try_or_string!(cursor.write_i32::<NetworkEndian>(data.x));
         try_or_string!(cursor.write_i32::<NetworkEndian>(data.y));
@@ -62,6 +66,32 @@ impl<'a> Baton {
         match self.socket.send_to(&cursor.into_inner(), &self.server_url) {
             Ok(_) => Ok(()),
             Err(error) => Err(format!("{:}", error)),
+        }
+    }
+}
+
+#[derive(Debug)]
+#[repr(u8)]
+enum StatusUpdate {
+    Ping,
+    Connect,
+    Disconnect,
+}
+
+impl StatusUpdate {
+    fn to_byte(self) -> u8 {
+        match self {
+            StatusUpdate::Ping => 0,
+            StatusUpdate::Connect => 1,
+            StatusUpdate::Disconnect => 2,
+        }
+    }
+
+    fn from_byte(byte: u8) -> StatusUpdate {
+        match byte {
+            1 => StatusUpdate::Connect,
+            2 => StatusUpdate::Disconnect,
+            _ => StatusUpdate::Ping,
         }
     }
 }
@@ -131,9 +161,9 @@ pub extern "C" fn disconnect_from_server(ptr: *mut *mut Baton) {
 }
 
 #[no_mangle]
-pub extern "C" fn send_ding(ptr: *mut Baton) -> bool {
+pub extern "C" fn send_status_update(ptr: *mut Baton, id: u32, status: u8) -> bool {
     if !ptr.is_null() {
-        match Baton::from_ptr(ptr).send_ding() {
+        match Baton::from_ptr(ptr).send_status_update(id, StatusUpdate::from_byte(status)) {
             Ok(_) => true,
             Err(message) => {
                 debug!("Error while sending: {:}", message);

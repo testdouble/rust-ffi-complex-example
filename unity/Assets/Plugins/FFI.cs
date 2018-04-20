@@ -15,6 +15,13 @@ public class FFI
         public Int32 y;
     }
 
+    public enum StatusUpdate
+    {
+        Ping = 0,
+        Connect,
+        Disconnect,
+    }
+
     [DllImport("libffi_example")]
     private static extern bool connect_to_server(out IntPtr baton, byte[] url);
     public static bool connectToServer(string url)
@@ -30,10 +37,10 @@ public class FFI
     }
 
     [DllImport("libffi_example")]
-    private static extern void send_ding(IntPtr baton);
-    public static void sendDing()
+    private static extern void send_status_update(IntPtr baton, UInt32 id, byte status);
+    public static void sendStatusUpdate(StatusUpdate status)
     {
-        send_ding(_baton);
+        send_status_update(_baton, _id, (byte)status);
     }
 
     [DllImport("libffi_example")]
