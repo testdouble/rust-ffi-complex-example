@@ -22,6 +22,21 @@ public class FFI
         Disconnect,
     }
 
+    public enum UpdateType {
+        None = 0,
+        Connect,
+        Disconnect,
+        Position,
+    }
+
+    [StructLayout(LayoutKind.Sequential)]
+    public class IncomingUpdate {
+        public byte type = (byte)UpdateType.None;
+        public UInt32 id = 0;
+        public Int32 x = 0;
+        public Int32 y = 0;
+    }
+
     [DllImport("libffi_example")]
     private static extern bool connect_to_server(out IntPtr baton, byte[] url);
     public static bool connectToServer(string url)
@@ -54,5 +69,16 @@ public class FFI
         update.y = (Int32)Mathf.RoundToInt(position.y * 10000);
 
         send_position_update(_baton, update);
+    }
+
+    [DllImport("libffi_example")]
+    private static extern void read_next_update(IntPtr baton, IncomingUpdate update);
+    public static IncomingUpdate readNextUpdate()
+    {
+        IncomingUpdate update = new IncomingUpdate();
+
+        read_next_update(_baton, update);
+
+        return update;
     }
 }

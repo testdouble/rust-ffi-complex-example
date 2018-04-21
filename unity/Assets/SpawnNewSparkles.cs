@@ -16,5 +16,8 @@ public class SpawnNewSparkles : MonoBehaviour {
   }
 
   void Update () {
+    FFI.IncomingUpdate update = FFI.readNextUpdate();
+
+    Debug.Log(string.Format("Update: {0} {1} {2}", update.type, update.x, update.y));
   }
 }

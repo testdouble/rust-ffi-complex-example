@@ -18,7 +18,7 @@ function removeKnownClient(id) {
 
 function broadcastUpdateToKnownClients(buffer) {
   Reflect.ownKeys(knownClients)
-    .map(clientId => knownClients[clientId])
+    .map(clientId => knownClients[clientId].rinfo)
     .forEach(rinfo => socket.send(buffer, rinfo.port, rinfo.address))
 }
 
@@ -28,7 +28,7 @@ socket.on('message', function (message, rinfo) {
   switch (message[0]) {
     case CONNECT_EVENT_ID:
       eventId = "CONNECT"
-      addKnownClient(message.readUInt32BE(1))
+      addKnownClient(message.readUInt32BE(1), rinfo)
       break
     case DISCONNECT_EVENT_ID:
       eventId = "DISCONNECT"

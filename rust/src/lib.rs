@@ -34,6 +34,8 @@ impl<'a> Baton {
             Err(error) => return Err(format!("{:}", error)),
         };
 
+        socket.set_nonblocking(true).unwrap();
+
         Ok(Baton { socket: socket, server_url: String::from(url) })
     }
 
@@ -68,6 +70,46 @@ impl<'a> Baton {
             Err(error) => Err(format!("{:}", error)),
         }
     }
+
+    fn read_next_update(&mut self, data: *mut IncomingUpdate) -> Result<(), String> {
+        if data.is_null() {
+            return Ok(());
+        }
+
+        let mut buffer = vec![0; 64];
+        let result = self.socket.recv(&mut buffer);
+
+        if let Err(ref error) = result {
+            if error.kind() == ::std::io::ErrorKind::WouldBlock {
+                return Ok(());
+            }
+        }
+
+        try_or_string!(result);
+        if result.unwrap() == 0 {
+            return Ok(());
+        }
+
+        let mut cursor = Cursor::new(buffer);
+        let update_type = cursor.read_u8().unwrap();
+
+        unsafe {
+            (*data).update_type = update_type;
+        }
+
+        // Only updates need to continue reading, otherwise the update type
+        // should be sufficient.
+        if update_type == 3 {
+            unsafe {
+                (*data).id = cursor.read_u32::<NetworkEndian>().unwrap();
+                (*data).x = cursor.read_i32::<NetworkEndian>().unwrap();
+                (*data).y = cursor.read_i32::<NetworkEndian>().unwrap();
+                debug!("Data: {:?}", *data);
+            }
+        }
+
+        Ok(())
+    }
 }
 
 #[derive(Debug)]
@@ -99,6 +141,15 @@ impl StatusUpdate {
 #[derive(Clone, Debug, PartialEq)]
 #[repr(C)]
 pub struct PositionUpdate {
+    pub id: u32,
+    pub x: i32,
+    pub y: i32,
+}
+
+#[derive(Clone, Debug, PartialEq)]
+#[repr(C)]
+pub struct IncomingUpdate {
+    pub update_type: u8,
     pub id: u32,
     pub x: i32,
     pub y: i32,
@@ -180,6 +231,22 @@ pub extern "C" fn send_status_update(ptr: *mut Baton, id: u32, status: u8) -> bo
 pub extern "C" fn send_position_update(ptr: *mut Baton, data: *mut PositionUpdate) -> bool {
     if !ptr.is_null() && !data.is_null() {
         match Baton::from_ptr(ptr).send_position_update(PositionUpdate::from_ptr(data)) {
+            Ok(_) => true,
+            Err(message) => {
+                debug!("Error while sending: {:}", message);
+
+                false
+            }
+        }
+    } else {
+        false
+    }
+}
+
+#[no_mangle]
+pub extern "C" fn read_next_update(ptr: *mut Baton, data: *mut IncomingUpdate) -> bool {
+    if !ptr.is_null() {
+        match Baton::from_ptr(ptr).read_next_update(data) {
             Ok(_) => true,
             Err(message) => {
                 debug!("Error while sending: {:}", message);
