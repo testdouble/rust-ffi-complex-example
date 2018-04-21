@@ -97,14 +97,18 @@ impl<'a> Baton {
             (*data).update_type = update_type;
         }
 
-        // Only updates need to continue reading, otherwise the update type
-        // should be sufficient.
-        if update_type == 3 {
+        // All valid updates need to read off the ID.
+        if update_type == 1 || update_type == 2 || update_type == 3 {
             unsafe {
                 (*data).id = cursor.read_u32::<NetworkEndian>().unwrap();
+            }
+        }
+
+        // Only position updates need to read the position.
+        if update_type == 3 {
+            unsafe {
                 (*data).x = cursor.read_i32::<NetworkEndian>().unwrap();
                 (*data).y = cursor.read_i32::<NetworkEndian>().unwrap();
-                debug!("Data: {:?}", *data);
             }
         }
 

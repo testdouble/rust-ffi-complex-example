@@ -36,9 +36,10 @@ socket.on('message', function (message, rinfo) {
       break
     case UPDATE_EVENT_ID:
       eventId = "UPDATE"
-      broadcastUpdateToKnownClients(message)
       break
   }
+
+  broadcastUpdateToKnownClients(message)
 
   console.log(`---
 Received message:
