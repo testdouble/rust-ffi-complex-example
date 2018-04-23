@@ -1,20 +1,31 @@
-# Rust FFI Example
+# Complex Rust FFI Example
 
-An example project that shows the use of Rust's FFI capabilities to handle memory- or performance-senstivie work in Rust while the remainder of the application is written in Unity.
+The stated goal from [round one][orig-repo]:
 
-This initial version uses Rust to manage a simple-as-it-gets UDP protocol between a Unity app with a desk bell and a Node server listening for when that bell rings.
+> An example project that shows the use of Rust's FFI capabilities to handle memory- or performance-senstivie work in Rust while the remainder of the application is written in Unity.
 
-Over time, this project can grow to show more available features of both Rust and FFI:
+This follow-up to that project shows how to use more complex data structures (e.g. classes, structs) to share more sophisticated state between Unity and Rust. We're still using a Node server to manage connections, and leaning on Rust for networking, but this time multiple clients are connected, each creating a "sparkle" who's position is synchronized across all clients.
 
-- Custom network protocols in Rust.
-- Reading complex data structures into C# from Rust.
-- A working game, perhaps?
+For more information, see the full [write-up][blog-post].
 
-## What's with the desk bell?
+## Interesting files
 
-It's from a game called Pit.
+|File|Description|
+|---|---|
+| `node/server.js` | Handles managing client state and broadcasting incoming messages to all connected clients. |
+| `rust/src/lib.rs` | Defines the Rust-provided behaviour, sending events to the server based on FFI calls. |
+| `unity/Assets/Plugins/FFI.cs` | C# bindings to the Rust library, as well as a few tricks to make those bindings simpler, e.g. handling floats. |
+| `unity/Assets/SpawnNewSparkles.cs` | Unity Behaviour that consumes Rust-provided events and manages the Transforms for the different sparkles. |
+| `unity/Assets/BroadcastMousePosition.cs` | Unity Behaviour that calls to Rust when the mouse button is down. |
 
-## Attributions
+## TODO
 
-- Thanks to "Alexander" and [Orange Free Sounds](http://www.orangefreesounds.com/) for the [desk bell sound](http://www.orangefreesounds.com/desk-bell-sound/).
-- Thanks to "BrainyBear" and [3d Warehouse](https://3dwarehouse.sketchup.com/index.html) for the [desk bell model](https://3dwarehouse.sketchup.com/model/u08e270fd-85eb-474b-900f-9a8c35c9a452/Service-Bell).
+Looking for ways to extend this further? Here are some ideas (with varying levels of hand-holding):
+
+- [ ] Don't broadcast redundant state updates.
+- [ ] Broadcast the last-known position of all existing clients to new clients.
+- [ ] There are still some `unwrap()` calls left in Rust for simplicity. Replace them with a different error handling strategy.
+- [ ] If the Unity app loses focus and a lot of events come in, it will get behind and "catch up" once it regains focus. Fix that.
+
+[orig-repo]: https://github.com/testdouble/rust-ffi-example
+[blog-post]:
