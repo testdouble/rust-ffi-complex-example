@@ -8,11 +8,10 @@ public class FFI
     private static IntPtr _baton;
     private static UInt32 _id = (UInt32)(new System.Random()).Next();
 
-    [StructLayout(LayoutKind.Sequential)]
-    public class PositionUpdate {
+    public class Update {
+        public UpdateType type;
         public UInt32 id;
-        public Int32 x;
-        public Int32 y;
+        public Vector3 position;
     }
 
     public enum StatusUpdate
@@ -30,11 +29,18 @@ public class FFI
     }
 
     [StructLayout(LayoutKind.Sequential)]
-    public class IncomingUpdate {
+    private class rIncomingUpdate {
         public byte type = (byte)UpdateType.None;
         public UInt32 id = 0;
         public Int32 x = 0;
         public Int32 y = 0;
+    }
+
+    [StructLayout(LayoutKind.Sequential)]
+    private class rPositionUpdate {
+        public UInt32 id;
+        public Int32 x;
+        public Int32 y;
     }
 
     [DllImport("libffi_example")]
@@ -59,10 +65,10 @@ public class FFI
     }
 
     [DllImport("libffi_example")]
-    private static extern void send_position_update(IntPtr baton, PositionUpdate data);
+    private static extern void send_position_update(IntPtr baton, rPositionUpdate data);
     public static void sendPositionUpdate(Vector3 position)
     {
-        PositionUpdate update = new PositionUpdate();
+        rPositionUpdate update = new rPositionUpdate();
 
         update.id = _id;
         update.x = (Int32)Mathf.RoundToInt(position.x * 10000);
@@ -72,12 +78,17 @@ public class FFI
     }
 
     [DllImport("libffi_example")]
-    private static extern void read_next_update(IntPtr baton, IncomingUpdate update);
-    public static IncomingUpdate readNextUpdate()
+    private static extern void read_next_update(IntPtr baton, rIncomingUpdate update);
+    public static Update readNextUpdate()
     {
-        IncomingUpdate update = new IncomingUpdate();
+        rIncomingUpdate incoming = new rIncomingUpdate();
 
-        read_next_update(_baton, update);
+        read_next_update(_baton, incoming);
+
+        Update update = new Update();
+        update.type = (UpdateType)incoming.type;
+        update.id = incoming.id;
+        update.position = new Vector3(incoming.x / 10000.0f, incoming.y / 10000.0f, 0.0f);
 
         return update;
     }

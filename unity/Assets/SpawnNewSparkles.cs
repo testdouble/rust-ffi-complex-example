@@ -22,11 +22,11 @@ public class SpawnNewSparkles : MonoBehaviour {
   }
 
   void Update () {
-    FFI.IncomingUpdate update = FFI.readNextUpdate();
+    FFI.Update update = FFI.readNextUpdate();
 
-    Debug.Log(string.Format("Update: {0} {1} {2} {3}", update.type, update.id, update.x, update.y));
+    Debug.Log(string.Format("Update: {0} {1} {2}", update.type, update.id, update.position));
 
-    switch ((FFI.UpdateType)update.type) {
+    switch (update.type) {
       case FFI.UpdateType.Connect:
         sparkles.Add(update.id, Instantiate(sparklePrefab));
         break;
@@ -35,7 +35,7 @@ public class SpawnNewSparkles : MonoBehaviour {
         sparkles.Remove(update.id);
         break;
       case FFI.UpdateType.Position:
-        sparkles[update.id].position = new Vector3(update.x, update.y, 0);
+        sparkles[update.id].position = update.position;
         break;
       default:
         break;

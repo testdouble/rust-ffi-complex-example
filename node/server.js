@@ -8,8 +8,8 @@ const UPDATE_EVENT_ID = 3
 
 const knownClients = {}
 
-function addKnownClient(id, rinfo) {
-  knownClients[id] = { rinfo }
+function addKnownClient(id, rinfo, joinMessage) {
+  knownClients[id] = { rinfo, joinMessage }
 }
 
 function removeKnownClient(id) {
@@ -22,13 +22,20 @@ function broadcastUpdateToKnownClients(buffer) {
     .forEach(rinfo => socket.send(buffer, rinfo.port, rinfo.address))
 }
 
+function broadcastAllJoinsToClient(rinfo) {
+  Reflect.ownKeys(knownClients)
+    .map(clientId => knownClients[clientId].joinMessage)
+    .forEach(joinMessage => socket.send(joinMessage, rinfo.port, rinfo.address))
+}
+
 socket.on('message', function (message, rinfo) {
   var eventId = "PING"
 
   switch (message[0]) {
     case CONNECT_EVENT_ID:
       eventId = "CONNECT"
-      addKnownClient(message.readUInt32BE(1), rinfo)
+      broadcastAllJoinsToClient(rinfo)
+      addKnownClient(message.readUInt32BE(1), rinfo, message)
       break
     case DISCONNECT_EVENT_ID:
       eventId = "DISCONNECT"
